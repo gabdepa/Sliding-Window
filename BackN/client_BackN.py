@@ -56,14 +56,12 @@ with open(filename, 'rb') as f:
                 window_data.append(packet)            
                 data_size += len(packet)              
             
-        if window_data != []:
-            for packet in window_data: # Envia cada pacote da janela
-                while True: # Espera pela confirmação de recebimento do servidor
+        if window_data != []: # Window lack of packets, there is nothing more to send, go to else
+            for packet in window_data: # Send each packet in the window
                     try:
-                        
-                        sock.send(packet) # Envio dos dados
-                        message = sock.recv(BUFFER_SIZE) # Armazena a mensagem recebida do servidor
-                        if ":ACK".encode() in message:
+                        sock.send(packet) # Send the data
+                        message = sock.recv(BUFFER_SIZE) # Store the server return message
+                        if ":ACK".encode() in message: # Received ACK
                             print("\n=> Confirmation Received: ", message.decode('utf-8'))
                             last_seq_num = seq_num
                             rec_seq_num = message.decode().split(':')[0]
@@ -76,7 +74,7 @@ with open(filename, 'rb') as f:
                             retries = 0  # reseta contador de tentativas após sucesso
                             print("\n----------WINDOW PACKETS AFTER ACK: ",window_data, "\n")
                             break # Confirmação recebida, interrompe o loop
-                        else:
+                        else: # Received NACK
                             print("==> Receipt not confirmed: ", message.decode('utf-8'))
                             rec_seq_num = message.decode().split(':')[0]
                             print(rec_seq_num)
