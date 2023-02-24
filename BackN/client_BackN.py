@@ -64,7 +64,6 @@ with open(filename, 'rb') as f:
                                 if rec_seq_num in l.split(' - ')[0]: # If the number received in in the sequence number of the packet
                                     window_data.remove(i) # Here we take the packet that was ACK to server from the window
                             retries = 0  # Reset after success the retries
-                            print("\n----------WINDOW PACKETS AFTER ACK: ",window_data, "\n")
                             break # Ack received, break the loop
                         else: # Received NACK
                             retries += 1 # Increase the retrie of already sent packets
@@ -74,7 +73,6 @@ with open(filename, 'rb') as f:
                                 seq_num = i.decode().split(' - ')[0] # Take the sequence number of the packet
                                 if seq_num == rec_seq_num: # If it matches with the packet
                                     sock.send(i) # Send the packet again
-                            print("\n---------WINDOW PACKETS AFTER NACK: ",window_data, "\n")
                     except socket.timeout: # In case of timeout
                         retries += 1  # incrementa contador de tentativas
                         print(f"\nTimeout reached ({retries}/{MAX_RETRIES}), resending packet...") # Timeout reached, resend the packet
