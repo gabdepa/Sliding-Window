@@ -3,7 +3,7 @@ import time
 import os
 
 # Tamanho do buffer
-BUFFER_SIZE = 512
+BUFFER_SIZE = 128
 SEQ_HEADER = 20
 
 # Endereço e porta do servidor
@@ -33,20 +33,18 @@ while True:
 
 max_sequence = 7
 expected_seq_num = 0
-window_size = 3
+actual_seq = window_size = 3
 
 # Recebimento dos dados
 filename = 'arquivo_recebido.txt'
 with open(filename, 'wb') as f:
     # Usada para monitorar a quantidade total de dados recebidos.
     received_data_size = 0
+    data = conn.recv(BUFFER_SIZE*window_size + SEQ_HEADER) # Recebe os dados do cliente, eles serão armazenados na variável data.
     while True:
-        try:
-            time.sleep(0.5)
-
-            # Recebe os dados do cliente, eles serão armazenados na variável data.
-            data = conn.recv(BUFFER_SIZE*window_size + SEQ_HEADER)
+        try:         
             data_str = data.decode('utf-8') # Decode the data
+            print("\n-------------------> ",data_str,"\n")
             if data_str != "":
                 message = data_str.split(' - b')[1]
                 # O tamanho do dado recebido é adicionado à variável received_data_size
@@ -60,19 +58,24 @@ with open(filename, 'wb') as f:
                     seq_num = data_str.split(' - ')[0]
                     seq_num = int(seq_num)
                     print("Sequence Number DECODED: ", seq_num)
+                    if (seq_num > window_size):
+                        actual_seq = seq_num+window_size
+                        
                     if seq_num == expected_seq_num:
-                        print(f"Sending {seq_num}:ACK, because {expected_seq_num}={seq_num}")
+                        print(f"Sending {seq_num}:ACK, Expected={expected_seq_num}={seq_num}")
                         conn.send(f"{expected_seq_num}:ACK".encode('utf-8'))
-                        if (expected_seq_num < window_size):
-                            expected_seq_num += 1
-                        else: 
-                            expected_seq_num += window_size+1
+                        expected_seq_num += 1
+                    elif seq_num < expected_seq_num:
+                        print(f"Sending {seq_num}:ACK, because {expected_seq_num}>{seq_num}")
+                        conn.send(f"{seq_num}:ACK".encode('utf-8'))
                     else:
                         print(f"Sending {expected_seq_num}:NACK, received: {seq_num} | expected: {expected_seq_num}")
                         conn.send(f"{expected_seq_num}:NACK".encode('utf-8'))
             else: # Nenhum dado recebido, o loop é interrompido
                 print(f"\n------> Received END of transmission, closing connection")
                 break
+            time.sleep(0.5)
+            data = conn.recv(BUFFER_SIZE*window_size + SEQ_HEADER) # Recebe os dados do cliente, eles serão armazenados na variável data.
         # Caso ocorra uma exceção do tipo BlockingIOError ou KeyboardInterrupt, o código é direcionado para o bloco except
         except KeyboardInterrupt:
             # Nenhuma mensagem disponível no momento

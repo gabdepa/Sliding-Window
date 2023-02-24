@@ -3,7 +3,7 @@ import sys
 import time
 
 # Tamanho do buffer
-BUFFER_SIZE = 512
+BUFFER_SIZE = 128
 
 # Endereço e porta do servidor
 SERVER_ADDRESS = ('localhost', 5000)
@@ -37,28 +37,26 @@ start_time = time.time()  # tempo de início do envio dos pacotes
 retries = 0
 data_size = 0
 window_data = [] # List that hold the window data
+flag = True
 
 # Abertura do arquivo
 filename = "./testMessage.txt"
 with open(filename, 'rb') as f:
-    while (time.time() - start_time) < TIMEOUT:  # Enquanto houver dados a serem enviados e o tempo limite não foi atingido
-        
+    while ((time.time() - start_time) < TIMEOUT) and flag == True :  # Enquanto houver dados a serem enviados e o tempo limite não foi atingido
         for i in range(window_size):
             data = str(f.read(BUFFER_SIZE))
             if (data == "b''"):
-                # Send packet indicating the sequence has finished
-                packet = ''
+                print("\nWINDOW PACKETS: ",window_data)
+                break
+            else:
+                seq_num = int(seq_num) + 1
+                packet = str(seq_num) + " - " + data # Creating packet with sequence number
                 packet = packet.encode()
-                sock.send(packet)     
-                break 
-            seq_num = int(seq_num) + 1
-            packet = str(seq_num) + " - " + data # Creating packet with sequence number
-            packet = packet.encode()
-            print(f"\n=> Sending Sequence Number: {seq_num} , Element {i} of window, Sending Data:\n {seq_num} - {data}")
-            window_data.append(packet)            
-            data_size += len(packet)              
+                print(f"\n=> Sending Sequence Number: {seq_num} , Element {i} of window, Sending Data:\n {seq_num} - {data}")
+                window_data.append(packet)            
+                data_size += len(packet)              
             
-        if (window_data != []):
+        if window_data != []:
             for packet in window_data: # Envia cada pacote da janela
                 while True: # Espera pela confirmação de recebimento do servidor
                     try:
@@ -88,8 +86,6 @@ with open(filename, 'rb') as f:
                                     sock.send(i) 
                             retries += 0  # reseta contador de tentativas após sucesso
                             print("\n---------WINDOW PACKETS AFTER NACK: ",window_data, "\n")
-
-                        time.sleep(1)
                     except socket.timeout:
                         retries += 1  # incrementa contador de tentativas
                         print(f"\nTimeout reached ({retries}/{MAX_RETRIES}), resending packet...") # Timeout atingido, reenvia o pacote
@@ -98,9 +94,15 @@ with open(filename, 'rb') as f:
                             break  
         else:
             print("\nWINDOW PACKETS: ",window_data)
-            print(f"Total Size of packages Sent: {data_size}")
-            print("All packets sent!\nClosing Socket")
-            sock.close() 
-            break           
-    
+            flag = False
+            break               
+  
 
+print(f"Total Size of packages Sent: {data_size}")
+print("All packets sent!\nClosing Socket")       
+packet = ''
+packet = packet.encode()
+sock.send(packet)    
+print("Signal to Close connection sent!") 
+time.sleep(1)
+sock.close() 
